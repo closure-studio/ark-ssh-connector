@@ -1,0 +1,29 @@
+{
+  "name": "ark-watcher",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "bundle": "node scripts/bundle-worker.mjs",
+    "build": "npm run bundle && wrangler deploy --dry-run --outdir .wrangler/dist",
+    "ci": "npm run type-check && npm run build",
+    "deploy": "wrangler deploy",
+    "postinstall": "patch-package",
+    "type-check": "tsc --noEmit",
+    "test": "npm run type-check"
+  },
+  "dependencies": {
+    "hono": "^4.12.25",
+    "ssh2": "^1.17.0"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20260610.0",
+    "@types/node": "^22.15.0",
+    "@types/ssh2": "^1.15.5",
+    "esbuild": "^0.27.1",
+    "patch-package": "^8.0.1",
+    "typescript": "^5.9.3",
+    "wrangler": "^4.99.0"
+  }
+}
