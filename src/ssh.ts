@@ -1,18 +1,21 @@
 import { connect } from 'cloudflare:sockets';
 import { Duplex } from 'node:stream';
-import type { Env } from './env';
 import type ClientConstructor from 'ssh2/lib/client.js';
 
 type SshClientConstructor = typeof ClientConstructor;
 
-interface SshCheckResult {
+export interface SshCommandRequest {
+  ip: string;
+  port: number;
+  username: string;
+  password: string;
+  command: string;
+}
+
+export interface SshCommandResult {
   connected: boolean;
   stdout: string;
   stderr: string;
-}
-
-interface SshBannerResult {
-  banner: string;
 }
 
 class WorkerSocketDuplex extends Duplex {
@@ -97,31 +100,23 @@ class WorkerSocketDuplex extends Duplex {
   }
 }
 
-export async function checkSsh(env: Env): Promise<SshCheckResult> {
-  const host = requireEnv(env.VPS_SSH_HOST, 'VPS_SSH_HOST');
-  const username = env.VPS_SSH_USERNAME ?? 'root';
-  const password = requireEnv(env.VPS_SSH_PASSWORD, 'VPS_SSH_PASSWORD');
-  const command = env.VPS_SSH_COMMAND ?? 'printf ark-watcher-ready';
-  const port = parsePort(env.VPS_SSH_PORT);
+export async function executeSshCommand(request: SshCommandRequest): Promise<SshCommandResult> {
   const Client = await loadSshClient();
 
   return new Promise((resolve, reject) => {
     const client = new Client();
     const stdoutChunks: Buffer[] = [];
     const stderrChunks: Buffer[] = [];
-    const debugLines: string[] = [];
-    const rejectWithDebug = (error: unknown) => {
-      const err = toError(error);
-      Object.assign(err, { debug: debugLines });
-      reject(err);
+    const rejectCommand = (error: unknown) => {
+      client.end();
+      reject(toError(error));
     };
 
     client
       .once('ready', () => {
-        client.exec(command, (error, stream) => {
+        client.exec(request.command, (error, stream) => {
           if (error) {
-            client.end();
-            rejectWithDebug(error);
+            rejectCommand(error);
             return;
           }
 
@@ -139,11 +134,11 @@ export async function checkSsh(env: Env): Promise<SshCheckResult> {
           stream.stderr.on('data', (chunk: Buffer) => stderrChunks.push(chunk));
         });
       })
-      .once('error', rejectWithDebug)
+      .once('error', rejectCommand)
       .connect({
-        sock: new WorkerSocketDuplex(host, port),
-        username,
-        password,
+        sock: new WorkerSocketDuplex(request.ip, request.port),
+        username: request.username,
+        password: request.password,
         algorithms: {
           cipher: [
             'aes128-ctr',
@@ -151,9 +146,6 @@ export async function checkSsh(env: Env): Promise<SshCheckResult> {
             'aes256-ctr',
           ],
           compress: ['none'],
-        },
-        debug: (message) => {
-          debugLines.push(message);
         },
         readyTimeout: 20_000,
       });
@@ -164,59 +156,6 @@ async function loadSshClient(): Promise<SshClientConstructor> {
   const module = await import('ssh2/lib/client.js');
 
   return module.default;
-}
-
-export async function readSshBanner(env: Env): Promise<SshBannerResult> {
-  const host = requireEnv(env.VPS_SSH_HOST, 'VPS_SSH_HOST');
-  const port = parsePort(env.VPS_SSH_PORT);
-  const socket = connect({ hostname: host, port });
-  const reader = socket.readable.getReader();
-
-  try {
-    const result = await Promise.race([
-      reader.read(),
-      timeout(5_000),
-    ]);
-
-    if (result.done || !result.value) {
-      throw new Error('SSH server closed before sending a banner');
-    }
-
-    return {
-      banner: Buffer.from(result.value).toString('utf8').trim(),
-    };
-  } finally {
-    reader.releaseLock();
-    await socket.close();
-  }
-}
-
-function timeout(ms: number): Promise<ReadableStreamReadResult<Uint8Array>> {
-  return new Promise((_, reject) => {
-    setTimeout(() => reject(new Error(`Timed out after ${ms}ms`)), ms);
-  });
-}
-
-function parsePort(value: string | undefined): number {
-  if (value === undefined || value === '') {
-    return 22;
-  }
-
-  const port = Number(value);
-
-  if (!Number.isInteger(port) || port < 1 || port > 65535) {
-    throw new Error('VPS_SSH_PORT must be an integer between 1 and 65535');
-  }
-
-  return port;
-}
-
-function requireEnv(value: string | undefined, name: string): string {
-  if (value === undefined || value === '') {
-    throw new Error(`${name} is required`);
-  }
-
-  return value;
 }
 
 function toError(error: unknown): Error {

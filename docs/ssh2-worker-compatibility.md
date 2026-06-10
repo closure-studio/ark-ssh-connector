@@ -95,14 +95,29 @@ node_modules/ssh2/lib/protocol/crypto/build/Release/obj.target/sshcrypto.node
 
 ## 运行配置
 
-需要在 Cloudflare Worker secrets / variables 中配置：
+Worker 仅暴露两个 API：
 
-```text
-VPS_SSH_HOST
-VPS_SSH_PORT
-VPS_SSH_USERNAME
-VPS_SSH_PASSWORD
-VPS_SSH_COMMAND
+- `GET /health`
+- `POST /ssh/exec`
+
+`POST /ssh/exec` 通过请求体传入 SSH 连接参数和命令：
+
+```json
+{
+  "ip": "34.172.67.144",
+  "port": 22,
+  "username": "root",
+  "password": "password",
+  "command": "uname -a"
+}
 ```
 
-`VPS_SSH_PORT` 为空时默认使用 `22`，`VPS_SSH_USERNAME` 为空时默认使用 `root`，`VPS_SSH_COMMAND` 为空时默认执行 `printf ark-watcher-ready`。
+成功响应：
+
+```json
+{
+  "connected": true,
+  "stdout": "Linux ...\n",
+  "stderr": ""
+}
+```
