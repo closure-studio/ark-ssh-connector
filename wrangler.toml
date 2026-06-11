@@ -1,4 +1,4 @@
-name = "ark-watcher"
+name = "ark-ssh-connector"
 main = "dist/worker.js"
 compatibility_date = "2026-06-10"
 compatibility_flags = ["nodejs_compat"]

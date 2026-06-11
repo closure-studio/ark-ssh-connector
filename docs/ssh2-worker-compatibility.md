@@ -13,7 +13,7 @@
 - 限制功能范围为 password auth + exec，不启用 SSH agent、SFTP、compression、默认 `net.Socket`。
 - 强制使用 AES-CTR cipher，避免 `workerd` 中 poly1305 WASM 初始化和 AES-GCM 兼容性问题。
 
-本项目已验证通过：Worker 本地运行时可以通过 `ssh2` 使用 `root + password` 登录临时 VPS，并执行 `printf ark-watcher-ready`。
+本项目已验证通过：Worker 本地运行时可以通过 `ssh2` 使用 `root + password` 登录临时 VPS，并执行 `printf ark-ssh-connector-ready`。
 
 ## 本地验证
 
@@ -58,7 +58,7 @@ export default {
 执行：
 
 ```bash
-npx wrangler deploy --dry-run --outdir "/tmp/arkwatcher-ssh2-check/dist"
+npx wrangler deploy --dry-run --outdir "/tmp/ark-ssh-connector-check/dist"
 ```
 
 直接使用 Wrangler 默认打包的结果：

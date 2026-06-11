@@ -1,5 +1,5 @@
 {
-  "name": "ark-watcher",
+  "name": "ark-ssh-connector",
   "version": "0.1.0",
   "private": true,
   "type": "module",
