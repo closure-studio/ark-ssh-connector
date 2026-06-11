@@ -28,6 +28,7 @@ await build({
   external: [
     'node:*',
     'cloudflare:sockets',
+    'cloudflare:workers',
   ],
   plugins: [
     {

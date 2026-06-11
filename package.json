@@ -14,7 +14,6 @@
     "test": "npm run type-check"
   },
   "dependencies": {
-    "hono": "^4.12.25",
     "ssh2": "^1.17.0"
   },
   "devDependencies": {

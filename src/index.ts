@@ -1,47 +1,17 @@
-import { Hono } from 'hono';
+import { WorkerEntrypoint } from 'cloudflare:workers';
 import { executeSshCommand, type SshCommandRequest } from './ssh';
 
-const app = new Hono();
-
-app.get('/health', (c) => {
-  return c.json({
-    status: 'healthy',
-  });
-});
-
-app.post('/ssh/exec', async (c) => {
-  let body: unknown;
-
-  try {
-    body = await c.req.json();
-  } catch {
-    return c.json(
-      {
-        connected: false,
-        error: 'Request body must be valid JSON',
-      },
-      400,
-    );
+export default class ArkSshConnector extends WorkerEntrypoint {
+  health(): { status: 'healthy' } {
+    return {
+      status: 'healthy',
+    };
   }
 
-  try {
-    const result = await executeSshCommand(parseSshCommandRequest(body));
-
-    return c.json(result);
-  } catch (error) {
-    const isValidationError = error instanceof RequestValidationError;
-
-    return c.json(
-      {
-        connected: false,
-        error: error instanceof Error ? error.message : String(error),
-      },
-      isValidationError ? 400 : 502,
-    );
+  async execute(request: SshCommandRequest) {
+    return executeSshCommand(parseSshCommandRequest(request));
   }
-});
-
-export default app;
+}
 
 class RequestValidationError extends Error {}
 
