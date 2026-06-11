@@ -2,6 +2,10 @@ import { WorkerEntrypoint } from 'cloudflare:workers';
 import { executeSshCommand, type SshCommandRequest } from './ssh';
 
 export default class ArkSshConnector extends WorkerEntrypoint {
+  fetch(): Response {
+    return new Response('Not found', { status: 404 });
+  }
+
   health(): { status: 'healthy' } {
     return {
       status: 'healthy',
